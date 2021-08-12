@@ -44,9 +44,10 @@
         <el-table-column label="操作">
           <template v-slot="scope">
             <el-button type="primary" icon="el-icon-edit" size="mini" @click="editUserDialog(scope.row.id)"></el-button>
-            <el-button type="danger" icon="el-icon-delete" size="mini" @click="delUserInfoById(scope.row.id)"></el-button>
-            <el-tooltip content="分配权限" placement="top" :enterable="false">
-              <el-button type="warning" icon="el-icon-setting" size="mini"></el-button>
+            <el-button type="danger" icon="el-icon-delete" size="mini" @click="delUserInfoById(scope.row.id)">
+            </el-button>
+            <el-tooltip content="分配角色" placement="top" :enterable="false">
+              <el-button type="warning" icon="el-icon-setting" size="mini" @click="setRoles(scope.row)"></el-button>
             </el-tooltip>
           </template>
         </el-table-column>
@@ -97,6 +98,20 @@
       <span slot="footer" class="dialog-footer">
         <el-button @click="editUserVisible = false">取 消</el-button>
         <el-button type="primary" @click="editUserInfo">确 定</el-button>
+      </span>
+    </el-dialog>
+    <el-dialog title="分配角色" :visible.sync="setRolesDialogVisible" width="50%" :before-close="handleClose" @close="resetRolesDialog">
+      <p>当前用户：{{userInfo.username}}</p>
+      <p>当前角色：{{userInfo.role_name}}</p>
+      <p>分配角色：
+        <el-select v-model="selectedRoleId" placeholder="请选择">
+          <el-option v-for="item in rolesList" :key="item.id" :label="item.roleName" :value="item.id">
+          </el-option>
+        </el-select>
+      </p>
+      <span slot="footer" class="dialog-footer">
+        <el-button @click="setRolesDialogVisible = false">取 消</el-button>
+        <el-button type="primary" @click="saveRoleInfo">确 定</el-button>
       </span>
     </el-dialog>
   </div>
@@ -213,7 +228,13 @@
         },
         // 获取到的编辑用户数据放在这里面
         editUserForm: {},
-
+        setRolesDialogVisible: false,
+        // 当前用户信息
+        userInfo: {},
+        // 角色列表
+        rolesList: [],
+        // 已选的角色id
+        selectedRoleId: ''
 
       }
     },
@@ -316,21 +337,58 @@
         })
 
       },
-      async delUserInfoById(id){
+      async delUserInfoById(id) {
         const confirmResult = await this.$confirm('此操作将永久删除该用户, 是否继续?', '提示', {
           confirmButtonText: '确定',
           cancelButtonText: '取消',
           type: 'warning'
-        }).catch(err=>err)
-        if(confirmResult=='confirm'){
-          const {data:res} = await this.$http.delete('users/'+id)
-          if(res.meta.status !=200){
+        }).catch(err => err)
+        if (confirmResult == 'confirm') {
+          const {
+            data: res
+          } = await this.$http.delete('users/' + id)
+          if (res.meta.status != 200) {
             return this.$message.error('操作失败！')
           }
           this.getUserList()
           return this.$message.success('删除成功！')
+
+        }
+      },
+      // 分配角色，打开对话框，获取数据并渲染
+      async setRoles(userInfo) {
+
+        const {
+          data: res
+        } = await this.$http.get('roles')
+        this.rolesList = res.data
+        if (res.meta.status != 200) return this.$message.error('操作失败')
+        // console.log(res);
+        this.userInfo = userInfo
+        this.setRolesDialogVisible = true
+      },
+      async saveRoleInfo() {
+        if (!this.selectedRoleId == true) return this.$message.error('请选择一个角色！')
+        // console.log(this.selectedRoleId);
+        const {
+          data: res
+        } = await this.$http.put(`users/${this.userInfo.id}/role`, {
+          rid: this.selectedRoleId
+        })
+        console.log(res);
+        if (res.meta.status != 200) {
+          this.setRolesDialogVisible = false
+          return this.$message.error(`${res.meta.msg}`)
           
         }
+        this.$message.success(`${res.meta.msg}`)
+        this.setRolesDialogVisible = false
+        this.getUserList()
+
+      },
+      resetRolesDialog(){
+        this.userInfo=[]
+        this.selectedRoleId=''
       }
     },
     created() {

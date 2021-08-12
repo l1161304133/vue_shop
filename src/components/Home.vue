@@ -82,7 +82,7 @@ export default {
     async getMenuList() {
       const { data: res } = await this.$http.get('menus')
       this.menulist = res.data
-      console.log(res)
+      // console.log(res)
     },
     changeCollapse() {
       this.isCollapse = !this.isCollapse
